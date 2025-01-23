@@ -1,0 +1,63 @@
+import hashlib
+import os
+import json
+
+# Generate a hash for the password
+def hash_password(password):
+    salt = os.urandom(16)
+    hashed_password = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    return salt + hashed_password
+
+# Verify the password
+def verify_password(stored_password, provided_password):
+    salt = stored_password[:16]
+    stored_hash = stored_password[16:]
+    provided_hash = hashlib.pbkdf2_hmac('sha256', provided_password.encode('utf-8'), salt, 100000)
+    return stored_hash == provided_hash
+
+# Register a new user
+def register_user(username, password, filename='accounts.json'):
+    accounts = load_accounts(filename)
+    if username in accounts:
+        print("Username already exists.")
+        return False
+    accounts[username] = hash_password(password).hex()
+    save_accounts(accounts, filename)
+    print("User registered successfully.")
+    return True
+
+# Login user
+def login_user(username, password, filename='accounts.json'):
+    accounts = load_accounts(filename)
+    if username not in accounts:
+        print("User not found.")
+        return False
+    stored_password = bytes.fromhex(accounts[username])
+    if verify_password(stored_password, password):
+        print("Login successful.")
+        return True
+    else:
+        print("Invalid password.")
+        return False
+
+# Load accounts from a file
+def load_accounts(filename):
+    try:
+        with open(filename, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {}
+
+# Save accounts to a file
+def save_accounts(accounts, filename):
+    with open(filename, 'w') as file:
+        json.dump(accounts, file)
+
+# Example usage
+filename = 'accounts.json'
+
+# Register a new user
+register_user('alice', 'securepassword123', filename)
+
+# Attempt to login
+login_user('alice', 'securepassword123', filename)
